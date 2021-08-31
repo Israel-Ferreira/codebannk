@@ -11,6 +11,7 @@ type TxnDto struct {
 	ExpirationYear uint32
 	Cvv int32
 	Amount float64
+	Status string
 	Store string
 	Description string
 	CreatedAt time.Time

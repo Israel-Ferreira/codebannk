@@ -1,16 +1,20 @@
 package usecase
 
 import (
+	"encoding/json"
+
 	"github.com/Israel-Ferreira/codebank/domain"
 	"github.com/Israel-Ferreira/codebank/dto"
+	"github.com/Israel-Ferreira/codebank/infra/kafka"
 )
 
 type UseCaseTxn struct {
-	TxnRepository domain.TransactionRepository
+	TxnRepository   domain.TransactionRepository
+	PaymentProducer kafka.KafkaProducer
 }
 
-func NewUseCaseTxn(txnRepo domain.TransactionRepository) UseCaseTxn {
-	return UseCaseTxn{TxnRepository: txnRepo}
+func NewUseCaseTxn(txnRepo domain.TransactionRepository, paymentProducer kafka.KafkaProducer) UseCaseTxn {
+	return UseCaseTxn{TxnRepository: txnRepo, PaymentProducer: paymentProducer}
 }
 
 func (u UseCaseTxn) ProcessTxn(txnDto dto.TxnDto) (domain.Transaction, error) {
@@ -25,10 +29,35 @@ func (u UseCaseTxn) ProcessTxn(txnDto dto.TxnDto) (domain.Transaction, error) {
 	creditCard.Balance = ccBalanceAndLimit.Balance
 	creditCard.Limit = ccBalanceAndLimit.Limit
 
-
 	newTxn := u.hydrateTxn(txnDto, ccBalanceAndLimit)
 
 	newTxn.ProcessAndValidate(creditCard)
+
+	err = u.TxnRepository.SaveTransaction(*newTxn, *creditCard)
+
+	if err != nil {
+		return domain.Transaction{}, err
+	}
+
+	txnDto.ID = newTxn.ID
+	txnDto.Status = newTxn.Status
+	txnDto.CreatedAt = newTxn.CreatedAt
+
+	txnMsg := dto.ConvertTxnDtoToTxnMsg(txnDto)
+
+	msg, err := json.Marshal(txnMsg)
+
+
+
+	if err != nil {
+		return domain.Transaction{}, err
+	}
+
+
+	if err = u.PaymentProducer.PublishMessage(string(msg), "payment"); err != nil {
+		return domain.Transaction{}, err
+	}
+	
 
 	return *newTxn, nil
 }

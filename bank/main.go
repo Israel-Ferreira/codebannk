@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/Israel-Ferreira/codebank/domain"
+	"github.com/Israel-Ferreira/codebank/infra/kafka"
 	"github.com/Israel-Ferreira/codebank/infra/repository"
 	"github.com/Israel-Ferreira/codebank/usecase"
 	_ "github.com/lib/pq"
@@ -35,8 +36,14 @@ func main() {
 
 func SetupTxnUseCase(db *sql.DB) usecase.UseCaseTxn {
 	txnRepositoryDB := repository.NewTxnRepository(db)
-	return usecase.NewUseCaseTxn(txnRepositoryDB)
+
+
+	return usecase.NewUseCaseTxn(txnRepositoryDB, kafka.NewKafkaProducer())
 }
+
+
+
+
 
 func setupDb() *sql.DB {
 	psqlInfo := fmt.Sprintf(
