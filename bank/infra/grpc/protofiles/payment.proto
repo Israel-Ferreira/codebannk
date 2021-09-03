@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package payment;
+
+import "google/protobuf/empty.proto";
+
+option go_package="grpc/pb";
+
+
+service PaymentService {
+    rpc Payment(PaymentRequest) returns (google.protobuf.Empty) {}
+}
+
+
+message PaymentRequest {
+    CreditCard creditCard = 1;
+    float amount = 2;
+    string store = 3;
+    string status = 4;
+    string description = 5;
+}
+
+
+message CreditCard {
+    string name = 1;
+    string number = 2;
+    int32 expirationMonth = 3;
+    int32 expirationYear = 4;
+    int32 cvv = 5;
+}
